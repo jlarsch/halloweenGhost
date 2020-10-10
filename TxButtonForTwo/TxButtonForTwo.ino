@@ -140,6 +140,7 @@ void loop() {
             currSong+=1;
             if (currSong>count)
               currSong=1;
+           delay(3000);
     }
           
 
