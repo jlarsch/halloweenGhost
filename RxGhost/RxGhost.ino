@@ -17,6 +17,10 @@
 #define CSN_PIN 10
 #define in1 4
 
+int soundVol = 10; //0-30
+int frownTime = 5000; //time evil eyes frown (during flight down + some scare time)
+int stareTime = 5000; //time evil eyes stare (sturing return flight)
+
 
 const int numDevices = 2;      // number of MAX7219s used
 const int dataPin = 7;
@@ -31,16 +35,7 @@ unsigned long ElapsedTime  = 0;     // Elapsed time in uS
 #define MAX_INT 32767
 #define EMARKER ,{MAX_INT,MAX_INT,MAX_INT}
 
-#define SCREEN1  2
-#define SCREEN2  0
-#define SCREEN3  4
-#define SCREEN4  6
-#define SCREEN5  8
-#define SCREEN6  10
-#define SCREEN7  12
-#define SCREEN8  14
-// etc...
-
+#define SCREEN1 0
 
 // Drop this code into Arduino development environment    
     
@@ -100,12 +95,14 @@ unsigned long ElapsedTime  = 0;     // Elapsed time in uS
 #define RightEye27 53   
 #define LeftEye28 54    
 #define RightEye28 55   
+#define LeftEye29 56    
+#define RightEye29 57   
     
 typedef struct {    
   const unsigned char array1[8]; 
 } binaryArrayType;    
     
-binaryArrayType binaryArray[56] =   
+binaryArrayType binaryArray[58] =   
 {   
   { // LeftEye1, 0  
     B01111110,
@@ -666,6 +663,26 @@ binaryArrayType binaryArray[56] =
     B10000001,
     B10000001,
     B01111110
+  },  
+  { // LeftEye29, 56 
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00011000,
+    B00000000,
+    B00000000,
+    B00000000
+  },  
+  { // RightEye29, 57 
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00011000,
+    B00000000,
+    B00000000,
+    B00000000
   } 
 };    
   
@@ -687,7 +704,7 @@ frameType movie1[] =
 // Full wide again
 {LeftEye1,3000,2},
 // Frown
-{LeftEye5,5,3},    {LeftEye6,5,4}, {LeftEye7,5,5},  {LeftEye8,4000,11}, {LeftEye7,5,5},    {LeftEye6,5,4},   {LeftEye5,5,3}
+{LeftEye5,5,3},    {LeftEye6,5,4}, {LeftEye7,5,5},  {LeftEye8,4000,11}, {LeftEye7,5,5},    {LeftEye6,5,4},   {LeftEye5,5,0},   {LeftEye29,5,0}
 EMARKER
 };
 
@@ -713,6 +730,18 @@ frameType movie3[] =
 EMARKER
 };
 
+frameType movie4[] = 
+{
+// Blink
+{LeftEye1,6000,1}, {LeftEye2,5,1}, {LeftEye3,10,1}, {LeftEye4,10,1},   {LeftEye17,100,1}, {LeftEye4,10,1}, {LeftEye3,10,1}, {LeftEye2,5,1},
+// Full wide again
+{LeftEye1,3000,2},
+// Frown
+{LeftEye5,5,3},    {LeftEye6,5,4}, {LeftEye7,5,5},  {LeftEye8,frownTime,11}, {LeftEye7,5,5},    {LeftEye6,5,4},   {LeftEye5,5,0},
+// Blink
+{LeftEye1,stareTime,1}, {LeftEye2,5,1}, {LeftEye3,10,1}, {LeftEye4,10,1},   {LeftEye17,100,1}
+EMARKER
+};
 
 typedef struct {
     int frameCountCurrent;   // This field must be zero 
@@ -725,9 +754,7 @@ typedef struct {
 
 frameAnimationDescriptor nowShowing[] =
 {
-{0,0,0,SCREEN1, movie1},  
-{0,0,0,SCREEN2, movie2},
-{0,0,0,SCREEN3, movie3}
+{0,0,0,SCREEN1, movie4}
 };
 
 
@@ -745,8 +772,8 @@ void handleFrameAnimation(int whichScreen, int movielength, struct myframeType *
   
    if ((*frameCountCurrent) < (movielength-1))
      (*frameCountCurrent)++;
-   else
-     *frameCountCurrent = 0;
+   //else
+   //  *frameCountCurrent = 0;
 }
 
 
@@ -932,19 +959,16 @@ void getData() {
           if (state ==0){
             state=1;
             trigger = 0;
+            for (int index = 0; index < (sizeof(nowShowing)/sizeof(frameAnimationDescriptor)); index++)
+              nowShowing[index].frameCountCurrent = 0;
+
             //Serial.println("playing new song");
-            mp3.setVolume(10);
+            mp3.setVolume(soundVol);
             mp3.playGlobalTrack(currSong);
             currSong+=1;
             if (currSong>count)
               currSong=1;
-       
-//            mp3.playRandomTrackFromAll(); // random of all folders on sd
-
-//            if (mp3Busy==0){
-//              Serial.println("now Stop");
-//            mp3.stop();
-//            }
+ 
             state=0;
           }
         }

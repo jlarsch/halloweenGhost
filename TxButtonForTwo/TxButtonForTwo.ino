@@ -20,7 +20,7 @@
 #define button 7
 #define in1 4
 
-int soundVol = 30; //0-30
+int soundVol = 10; //0-30
 
 class Mp3Notify
 {
