@@ -14,9 +14,14 @@
 #define in2 8
 #define hallIn 3
 
-int numRot1 = 3;
-int numRot2 = 6;
-int numRot = 0;
+unsigned long CurrentTime  = 0;     // this variable will be overwritten by micros() each iteration of loop
+unsigned long startTime     = 0;     // A record of the time before this read
+unsigned long ElapsedTime  = 0;     // Elapsed time in uS
+
+int numRot1 = 15; // number of motor rotations flying down.
+unsigned long restDelay = 6000; // time before flyback (ms)
+int extraFlybackRevolution = 1; //compensation for slip.
+
 float hall_thresh = 100.0;
 float hall_count = 0.0;
 
@@ -31,14 +36,14 @@ bool on_state = false;
 
 int state = 0;
 int trigger = 0;
-int toggle=0;
+int numRot = 0; // stores actual motor rotations
+
 
 //==============
 
 void setup() {
 
     Serial.begin(9600);
-
     pinMode(enA, OUTPUT);
     pinMode(hallIn, INPUT);
         // Set initial rotation direction
@@ -59,39 +64,38 @@ void setup() {
     numRot=numRot1;
 }
 
-//==========
-
-void loop() {
-  int potValue = analogRead(A0); // Read potentiometer value
-  int pwmOutput = map(potValue, 0, 1023, 0 , 255); // Map the potentiometer value from 0 to 255
+void updateHall(){
   bool hall = digitalRead(hallIn);
 
   if (hall==0){
       if (on_state==false){
         on_state = true;
-        hall_count+=1.0;
+        hall_count++;
       }
     } else{
       on_state = false;
     }
+}
 
+//==========
 
+void loop() {
+  int potValue = analogRead(A0); // Read potentiometer value
+  int pwmOutput = map(potValue, 0, 1023, 0 , 255); // Map the potentiometer value from 0 to 255
+  
+
+    updateHall();
       
-    if (hall_count>numRot){
-      hall_count=0;
+    if (hall_count>numRot && state!= 2){
+      //hall_count=0;
       state+=1;
       if (state>3) state=0;
-
-      if (toggle==0){
-        numRot=numRot2;
-        toggle=1;}
-      else if (toggle==1){
-        numRot=numRot1;
-        toggle=0;}
     }
 
     if (state==0){
-        analogWrite(enA, 0); // Send PWM signal to L298N Enable pin
+        analogWrite(enA, 0); // Send stop signal to L298N Enable pin
+        numRot=numRot1;
+        hall_count=0;
     }
     else if (state==1){
       digitalWrite(in1, LOW);
@@ -100,15 +104,37 @@ void loop() {
     }
 
         else if (state==2){
-      analogWrite(enA, 0); // Send PWM signal to L298N Enable pin
-      delay(3000);
+      analogWrite(enA, 0); // Send stop signal to L298N Enable pin
+
+      startTime = millis();
+
+    ElapsedTime = 0;
+    while (ElapsedTime < restDelay)
+    {
+      CurrentTime = millis();
+      updateHall(); // keep counting revolutions in state 2. Ghost continues to fly even when motor is off.
+          
+    
+    Serial.print(state);
+    Serial.print(", waiting for delay,  ");
+    Serial.print(ElapsedTime);
+    Serial.print(",  ");
+        Serial.print(restDelay);
+    Serial.print(",  ");
+    Serial.println(hall_count);
+    
+      ElapsedTime = CurrentTime - startTime;
+    }
+    
+      numRot=hall_count + extraFlybackRevolution; // one more revolution on flyback to compensate for slip.
+      hall_count=0;
       state=3;
     }
 
     else if (state==3){
       digitalWrite(in1, HIGH);
       digitalWrite(in2, LOW);
-      analogWrite(enA, pwmOutput); // Send PWM signal to L298N Enable pin
+      analogWrite(enA, pwmOutput); // Send PWM signal to L298N Enable pin, reverse direction
     }
   
     getData();
