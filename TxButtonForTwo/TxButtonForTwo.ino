@@ -20,6 +20,8 @@
 #define button 7
 #define in1 4
 
+int soundVol = 30; //0-30
+
 class Mp3Notify
 {
 public:
@@ -135,7 +137,7 @@ void loop() {
     bool btn = digitalRead(button);
     if ((btn == HIGH) && (state == 0)){ // If Switch is Activated
           state=1;
-            mp3.setVolume(10);
+            mp3.setVolume(soundVol);
             mp3.playGlobalTrack(currSong);
             currSong+=1;
             if (currSong>count)

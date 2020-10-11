@@ -1,4 +1,6 @@
 
+// eyes from https://www.instructables.com/Animated-Halloween-Evil-Eyes/
+// nrf24 code inspired by https://forum.arduino.cc/index.php?topic=520515.0
 
 // SimpleRxAckPayload- the slave or the receiver
 

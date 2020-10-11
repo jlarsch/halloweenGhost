@@ -14,7 +14,9 @@
 #define in2 8
 #define hallIn 3
 
-int numRot = 5;
+int numRot1 = 3;
+int numRot2 = 6;
+int numRot = 0;
 float hall_thresh = 100.0;
 float hall_count = 0.0;
 
@@ -29,6 +31,7 @@ bool on_state = false;
 
 int state = 0;
 int trigger = 0;
+int toggle=0;
 
 //==============
 
@@ -52,6 +55,8 @@ void setup() {
     radio.startListening();
 
     radio.writeAckPayload(1, &ackData, sizeof(ackData)); // pre-load data
+
+    numRot=numRot1;
 }
 
 //==========
@@ -69,11 +74,20 @@ void loop() {
     } else{
       on_state = false;
     }
-    
+
+
+      
     if (hall_count>numRot){
       hall_count=0;
       state+=1;
       if (state>3) state=0;
+
+      if (toggle==0){
+        numRot=numRot2;
+        toggle=1;}
+      else if (toggle==1){
+        numRot=numRot1;
+        toggle=0;}
     }
 
     if (state==0){
