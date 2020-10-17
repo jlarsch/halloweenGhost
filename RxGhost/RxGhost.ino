@@ -15,7 +15,7 @@
 
 #define CE_PIN   9
 #define CSN_PIN 10
-#define in1 4
+#define in1 5
 
 int soundVol = 10; //0-30
 int frownTime = 5000; //time evil eyes frown (during flight down + some scare time)
@@ -23,9 +23,9 @@ int stareTime = 5000; //time evil eyes stare (sturing return flight)
 
 
 const int numDevices = 2;      // number of MAX7219s used
-const int dataPin = 7;
-const int clkPin = 6;
-const int csPin = 5;
+const int dataPin = 4;
+const int clkPin = 3;
+const int csPin = 2;
 LedControl lc=LedControl(dataPin,clkPin,csPin,numDevices);
 #define DELAY_US             1000   // Delay time in MicroSeconds
 unsigned long CurrentTime  = 0;     // this variable will be overwritten by micros() each iteration of loop
@@ -838,7 +838,7 @@ public:
 
 // Some arduino boards only have one hardware serial port, so a software serial port is needed instead.
 // comment out the above definition and uncomment these lines
-SoftwareSerial secondarySerial(2, 3); // RX, TX
+SoftwareSerial secondarySerial(6, 7); // RX, TX
 DFMiniMp3<SoftwareSerial, Mp3Notify> mp3(secondarySerial);
 
 
