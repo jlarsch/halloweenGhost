@@ -20,7 +20,7 @@ unsigned long ElapsedTime  = 0;     // Elapsed time in uS
 
 int numRot1 = 15; // number of motor rotations flying down.
 unsigned long restDelay = 6000; // time before flyback (ms)
-int extraFlybackRevolution = 1; //compensation for slip.
+int extraFlybackRevolution = 3; //compensation for slip.
 
 float hall_thresh = 100.0;
 float hall_count = 0.0;

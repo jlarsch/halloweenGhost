@@ -19,8 +19,14 @@
 #define CSN_PIN 10
 #define button 7
 #define in1 4
+#define enA 5
 
-int soundVol = 10; //0-30
+unsigned long lastTime  = 0;     // this variable will be overwritten by micros() each iteration of loop
+unsigned long startTime     = 0;     // A record of the time before this read
+float ElapsedTime  = 0;     // Elapsed time in uS
+int restTime = 3000;
+int soundVol = 30; //0-30
+float BlinkFreq = 0.0;
 
 class Mp3Notify
 {
@@ -102,6 +108,8 @@ uint16_t count =0;
 void setup() {
 
     Serial.begin(9600);
+    BlinkFreq = 1000.0;
+    pinMode(enA, OUTPUT);
     Serial.println(F("Source File = /mnt/SGT/SGT-Prog/Arduino/ForumDemos/nRF24Tutorial/MultiTxAckPayload.ino "));
     Serial.println("SimpleTxAckPayload Starting");
     radio.begin();
@@ -128,21 +136,53 @@ void setup() {
     Serial.println(mode);
     
     Serial.println("starting...");
+    startTime = millis();
 }
 
 //=============
 
 void loop() {
+    
+    // button glow
+    lastTime = millis();
+    float tmp = sin(lastTime/BlinkFreq);
+    int buttonOut = (tmp+1)*(255.0/2.0);
+    analogWrite(enA, buttonOut);
+
+    //-------
+    
+    
+
+    Serial.print(startTime);
+        Serial.print(",");
+    Serial.print(lastTime);
+        Serial.print(",");
+        Serial.print(BlinkFreq);
+                Serial.print(",");
+    
+    Serial.println(ElapsedTime);
+    //    Serial.print(",");
+    //Serial.println(tmp);
+
 
     bool btn = digitalRead(button);
-    if ((btn == HIGH) && (state == 0)){ // If Switch is Activated
+    ElapsedTime = lastTime-startTime;
+    if ((btn == HIGH) && (state == 0) && (ElapsedTime> restTime)){ // If Switch is Activated
+          startTime = millis();
           state=1;
+          BlinkFreq = 100.0;
             mp3.setVolume(soundVol);
             mp3.playGlobalTrack(currSong);
             currSong+=1;
             if (currSong>count)
               currSong=1;
-           delay(3000);
+
+    }
+    if (ElapsedTime< restTime){
+                 BlinkFreq = 100.0;
+    }
+    else{
+                       BlinkFreq = 1000.0;
     }
           
 
@@ -157,6 +197,8 @@ void loop() {
 }
 
 //================
+
+
 
 void send() {
     for (byte n = 0; n < numSlaves; n++){
