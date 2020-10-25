@@ -1,5 +1,5 @@
 
-
+// arrow led: https://github.com/simonwongwong/Bluetooth-enabled_bicycle_turn_signals/blob/master/code_for_lights.ino
 
 // MultiTxAckPayload - the master or the transmitter
 //   works with two Arduinos as slaves
@@ -17,16 +17,27 @@
 
 #define CE_PIN   9
 #define CSN_PIN 10
-#define button 7
-#define in1 4
-#define enA 5
+#define button 4
+#define flash A0 // control pin for mosfet -> flash LED strip
+//#define in1 4
+#define enA 5 // control pin for transistor -> glowing button LED
+
+int pressTrack = 6; // sound to play when button is pressed.
 
 unsigned long lastTime  = 0;     // this variable will be overwritten by micros() each iteration of loop
 unsigned long startTime     = 0;     // A record of the time before this read
 float ElapsedTime  = 0;     // Elapsed time in uS
-int restTime = 3000;
+float restTime = 40000; // time to wait before releasing the ghose again. (make sure there is enough time for full fly back.)
 int soundVol = 30; //0-30
 float BlinkFreq = 0.0;
+int flashCount=0;
+int nextWait=0;
+
+unsigned long startArrow = 0;
+float ElapsedArrow = 0;
+
+#define flashLen 31
+int flashTimings[flashLen] = {100,200,1000,100,100,100,100,100,5000,100,100,700,400,100,100,900,100,300,400,100,6000,100,100,2000,400,100,100,800,100,300,400};
 
 class Mp3Notify
 {
@@ -100,8 +111,145 @@ unsigned long txIntervalMillis = 1000; // send once per second
 
 int state = 0; // 0: rest, 1: go, 2:arrive, 3: return
 int ghostState =0;
-int currSong=1;
 uint16_t count =0;
+
+#include "LedControl.h"
+
+LedControl lc = LedControl(6, 8, 7, 1); //DIN, CLK, CS
+int dlay = 100; // delay of 50ms per frame
+
+//left turn animation
+const byte LEFT[][8] = {
+  {
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000
+  }, {
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00000000
+  }, {
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00000000,
+    B00111100
+  }, {
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00000000,
+    B00111100,
+    B00000000
+  }, {
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00000000,
+    B00111100,
+    B00000000,
+    B01111110
+  }, {
+    B00000000,
+    B00000000,
+    B00011000,
+    B00000000,
+    B00111100,
+    B00000000,
+    B01111110,
+    B00000000
+  }, {
+    B00000000,
+    B00011000,
+    B00000000,
+    B00111100,
+    B00000000,
+    B01111110,
+    B00000000,
+    B11111111
+  }, {
+    B00011000,
+    B00000000,
+    B00111100,
+    B00000000,
+    B01111110,
+    B00000000,
+    B11111111,
+    B00000000
+  }, {
+    B00000000,
+    B00111100,
+    B00000000,
+    B01111110,
+    B00000000,
+    B11111111,
+    B00000000,
+    B00000000
+  }, {
+    B00111100,
+    B00000000,
+    B01111110,
+    B00000000,
+    B11111111,
+    B00000000,
+    B00000000,
+    B00000000
+  }, {
+    B00000000,
+    B01111110,
+    B00000000,
+    B11111111,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000
+  }, {
+    B01111110,
+    B00000000,
+    B11111111,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000
+  }, {
+    B00000000,
+    B11111111,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000
+  }, {
+    B11111111,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000
+  }
+};
+int i = 0;
+int len = sizeof(LEFT) / 8;
 
 //===============
 
@@ -110,6 +258,9 @@ void setup() {
     Serial.begin(9600);
     BlinkFreq = 1000.0;
     pinMode(enA, OUTPUT);
+    pinMode(flash,OUTPUT);
+    pinMode(button,INPUT);
+    
     Serial.println(F("Source File = /mnt/SGT/SGT-Prog/Arduino/ForumDemos/nRF24Tutorial/MultiTxAckPayload.ino "));
     Serial.println("SimpleTxAckPayload Starting");
     radio.begin();
@@ -137,6 +288,10 @@ void setup() {
     
     Serial.println("starting...");
     startTime = millis();
+
+      lc.shutdown(0, false); // Wake up displays
+  lc.setIntensity(0, 2); // Set intensity levels
+  lc.clearDisplay(0);  // Clear Displays
 }
 
 //=============
@@ -147,47 +302,64 @@ void loop() {
     lastTime = millis();
     float tmp = sin(lastTime/BlinkFreq);
     int buttonOut = (tmp+1)*(255.0/2.0);
-    analogWrite(enA, buttonOut);
 
     //-------
-    
-    
-
-    Serial.print(startTime);
-        Serial.print(",");
-    Serial.print(lastTime);
-        Serial.print(",");
-        Serial.print(BlinkFreq);
-                Serial.print(",");
-    
-    Serial.println(ElapsedTime);
-    //    Serial.print(",");
-    //Serial.println(tmp);
 
 
+      
+    
     bool btn = digitalRead(button);
     ElapsedTime = lastTime-startTime;
     if ((btn == HIGH) && (state == 0) && (ElapsedTime> restTime)){ // If Switch is Activated
           startTime = millis();
+          flashCount=0;
+          nextWait = flashTimings[flashCount];
           state=1;
           BlinkFreq = 100.0;
             mp3.setVolume(soundVol);
-            mp3.playGlobalTrack(currSong);
-            currSong+=1;
-            if (currSong>count)
-              currSong=1;
+            mp3.playGlobalTrack(pressTrack);
+
 
     }
     if (ElapsedTime< restTime){
                  BlinkFreq = 100.0;
+                 analogWrite(enA, 0);
+                 lc.clearDisplay(0);
     }
     else{
-                       BlinkFreq = 1000.0;
-    }
-          
+      BlinkFreq = 1000.0;
+      analogWrite(enA, buttonOut);
+      ElapsedArrow = lastTime-startArrow;
 
-    currentMillis = millis();
-    if (currentMillis - prevMillis >= txIntervalMillis) {
+      if (ElapsedArrow > dlay){
+        startArrow=millis();
+        for (int j = 0; j < 8; j++) {
+          lc.setRow(0, j, LEFT[i][j]);
+          lc.setRow(1, j, LEFT[i][j]);
+        }
+  
+        if (i < len - 1) {
+        i++;
+      } else {
+        i = 0;
+      }
+      
+      }
+    }
+
+    
+        if (ElapsedTime> nextWait){
+          if(flashCount<=flashLen){
+                flashCount++;
+                nextWait = nextWait+flashTimings[flashCount];
+                analogWrite(flash, 250*(flashCount % 2));
+          }
+                
+    }
+
+    currentMillis = millis(); 
+   
+    if (currentMillis - prevMillis >= txIntervalMillis) { 
         send();
         if (ghostState==0)
         state=0;
@@ -217,6 +389,8 @@ void send() {
                 radio.read(&ackData, sizeof(ackData));
                 newData = true;
                 ghostState=ackData[0];
+                Serial.print("  GhostState received: ");
+                Serial.print(ghostState);                
             }
         }
         else {

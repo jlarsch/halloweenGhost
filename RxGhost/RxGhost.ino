@@ -17,9 +17,11 @@
 #define CSN_PIN 10
 #define in1 5
 
-int soundVol = 10; //0-30
-int frownTime = 5000; //time evil eyes frown (during flight down + some scare time)
-int stareTime = 5000; //time evil eyes stare (sturing return flight)
+int soundVol = 30; //0-30
+int frownTime = 10000; //time evil eyes frown (during flight down + some scare time)
+int stareTime = 10000; //time evil eyes stare (during return flight)
+
+int playList[6]={24,24,16,17,23,1};
 
 
 const int numDevices = 2;      // number of MAX7219s used
@@ -45,7 +47,7 @@ unsigned long ElapsedTime  = 0;     // Elapsed time in uS
 #define RightEye2 3   
 #define LeftEye3 4    
 #define RightEye3 5   
-#define LeftEye4 6    
+#define LeftEye4 6  
 #define RightEye4 7   
 #define LeftEye5 8    
 #define RightEye5 9   
@@ -737,9 +739,9 @@ frameType movie4[] =
 // Full wide again
 {LeftEye1,3000,2},
 // Frown
-{LeftEye5,5,3},    {LeftEye6,5,4}, {LeftEye7,5,5},  {LeftEye8,frownTime,11}, {LeftEye7,5,5},    {LeftEye6,5,4},   {LeftEye5,5,0},
+{LeftEye5,5,3},    {LeftEye6,5,4}, {LeftEye7,5,5},  {LeftEye8,frownTime,15}, {LeftEye7,5,5},    {LeftEye6,5,4},   {LeftEye5,5,0},
 // Blink
-{LeftEye1,stareTime,1}, {LeftEye2,5,1}, {LeftEye3,10,1}, {LeftEye4,10,1},   {LeftEye17,100,1}
+{LeftEye1,stareTime,1}, {LeftEye2,5,1}, {LeftEye3,10,1}, {LeftEye4,10,1},   {LeftEye17,100,10}
 EMARKER
 };
 
@@ -850,7 +852,7 @@ bool on_state = false;
 
 int state = 0;
 int trigger = 0;
-int currSong=1;
+int currSong=0;
 uint16_t count =0;
 
 
@@ -958,23 +960,38 @@ void getData() {
         if (trigger == 1){
           if (state ==0){
             state=1;
-            trigger = 0;
+            //trigger = 0;
+            delay(2000);
             for (int index = 0; index < (sizeof(nowShowing)/sizeof(frameAnimationDescriptor)); index++)
               nowShowing[index].frameCountCurrent = 0;
 
             //Serial.println("playing new song");
             mp3.setVolume(soundVol);
-            mp3.playGlobalTrack(currSong);
-            currSong+=1;
-            if (currSong>count)
-              currSong=1;
+            delay(2000);
+            mp3.playGlobalTrack(playList[0]);
+            delay(200);
+            currSong=1;
+ 
  
             state=0;
           }
         }
+        else{
+        Serial.println(trigger);
+        Serial.println(currSong);
+        if ((currSong > 0)&&(currSong<=6)){
+          if (mp3Busy){
+            Serial.println(currSong);
+            mp3.playGlobalTrack(playList[currSong]);
+                        currSong+=1;
+            if (currSong>6)
+              currSong=0;
+              trigger=0;
+          }
+        }
         updateReplyData();
         newData = true;
-    }
+    }}
 }
 
 //================
@@ -994,8 +1011,8 @@ void showData() {
 //================
 
 void updateReplyData() {
-    ackData[0] = state;
-    ackData[1] = state;
+    ackData[0] = trigger;
+    ackData[1] = trigger;
 
     radio.writeAckPayload(1, &ackData, sizeof(ackData)); // load the payload for the next time
 }
