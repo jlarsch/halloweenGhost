@@ -21,7 +21,7 @@ int soundVol = 30; //0-30
 int frownTime = 10000; //time evil eyes frown (during flight down + some scare time)
 int stareTime = 10000; //time evil eyes stare (during return flight)
 
-int playList[6]={24,24,16,17,23,1};
+int playList[6]={24,16,17,23,1};
 
 
 const int numDevices = 2;      // number of MAX7219s used

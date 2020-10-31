@@ -18,12 +18,13 @@ unsigned long CurrentTime  = 0;     // this variable will be overwritten by micr
 unsigned long startTime     = 0;     // A record of the time before this read
 unsigned long ElapsedTime  = 0;     // Elapsed time in uS
 
-int numRot1 = 15; // number of motor rotations flying down.
+int numRot1 = 12; // number of motor rotations flying down.
 unsigned long restDelay = 6000; // time before flyback (ms)
-int extraFlybackRevolution = 3; //compensation for slip.
+unsigned long startDelay=15000;
+int extraFlybackRevolution = 10; //compensation for slip.
 
 float hall_thresh = 100.0;
-float hall_count = 0.0;
+unsigned long hall_count = 1;
 
 const byte thisSlaveAddress[5] = {'R','x','A','A','A'};
 
@@ -89,7 +90,10 @@ void loop() {
     if (hall_count>numRot && state!= 2){
       //hall_count=0;
       state+=1;
-      if (state>3) state=0;
+      if (state>3) {
+        state=0;
+        delay(5000);
+      }
     }
 
     if (state==0){
@@ -141,9 +145,9 @@ void loop() {
     updateReplyData();
     showData();
     delay(1);
-    Serial.println(hall_count);
-    Serial.print(", ");
-    Serial.print(state);
+    //Serial.print(hall_count);
+    //Serial.print(", ");
+    //Serial.println(state);
 }
 
 //============
@@ -154,6 +158,7 @@ void getData() {
         trigger=dataReceived;
         if (trigger == 1){
           if (state ==0){
+            delay(startDelay);
             state=1;
             trigger = 0;
           }
